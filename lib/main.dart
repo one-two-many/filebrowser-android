@@ -47,7 +47,10 @@ class _FileBrowserAppState extends State<FileBrowserApp> {
             return const FileListScreen();
           },
         ),
-        GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
+        GoRoute(
+          path: '/login',
+          builder: (context, state) => const LoginScreen(),
+        ),
       ],
       redirect: (context, state) {
         if (auth.isLoading) return null;

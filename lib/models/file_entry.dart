@@ -15,14 +15,28 @@ class FileEntry {
     required this.type,
   });
 
-  factory FileEntry.fromJson(Map<String, dynamic> json) {
+  // FileBrowser Quantum doesn't include each item's own path in the
+  // response, only the name — so we build it from the folder we asked for.
+  factory FileEntry.fromJson(
+    Map<String, dynamic> json, {
+    required bool isDir,
+    required String parentPath,
+  }) {
+    final name = json['name'] as String? ?? '';
     return FileEntry(
-      name: json['name'] as String? ?? '',
-      path: json['path'] as String? ?? '',
-      isDir: json['isDir'] as bool? ?? false,
+      name: name,
+      path: _joinPath(parentPath, name),
+      isDir: isDir,
       size: (json['size'] as num?)?.toInt() ?? 0,
-      modified: DateTime.tryParse(json['modified'] as String? ?? '') ?? DateTime.now(),
+      modified:
+          DateTime.tryParse(json['modified'] as String? ?? '') ??
+          DateTime.now(),
       type: json['type'] as String? ?? '',
     );
+  }
+
+  static String _joinPath(String parent, String name) {
+    if (parent.isEmpty || parent == '/') return '/$name';
+    return '$parent/$name';
   }
 }

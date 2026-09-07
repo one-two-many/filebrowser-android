@@ -63,7 +63,9 @@ class _FileListScreenState extends State<FileListScreen> {
             itemBuilder: (context, index) {
               final entry = entries[index];
               return ListTile(
-                leading: Icon(entry.isDir ? Icons.folder : Icons.insert_drive_file),
+                leading: Icon(
+                  entry.isDir ? Icons.folder : Icons.insert_drive_file,
+                ),
                 title: Text(entry.name),
                 subtitle: entry.isDir ? null : Text('${entry.size} bytes'),
                 onTap: () => _open(entry),

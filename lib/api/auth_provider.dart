@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -51,8 +52,17 @@ class AuthProvider extends ChangeNotifier {
       await client.login(username, password);
       _client = client;
       isAuthenticated = true;
+    } on DioException catch (e) {
+      // Surface the real cause instead of a generic message, so we can
+      // actually tell a wrong password apart from a network/server problem.
+      if (e.response != null) {
+        error = 'Login failed: server responded with ${e.response?.statusCode}';
+      } else {
+        error = 'Login failed: ${e.type.name} — ${e.message}';
+      }
+      debugPrint('Login error: $e');
     } catch (e) {
-      error = 'Login failed: could not authenticate with server';
+      error = 'Login failed: $e';
     } finally {
       isLoading = false;
       notifyListeners();
