@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import 'package:filebrowser/api/auth_provider.dart';
 import 'package:filebrowser/main.dart';
+import 'package:filebrowser/theme/theme_controller.dart';
 
 void main() {
   // flutter_secure_storage talks to the real device's secure storage over a
@@ -25,8 +26,11 @@ void main() {
 
   testWidgets('shows login screen when not authenticated', (tester) async {
     await tester.pumpWidget(
-      ChangeNotifierProvider(
-        create: (_) => AuthProvider(),
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => AuthProvider()),
+          ChangeNotifierProvider(create: (_) => ThemeController()),
+        ],
         child: const FileBrowserApp(),
       ),
     );

@@ -5,11 +5,16 @@ import 'package:provider/provider.dart';
 import 'api/auth_provider.dart';
 import 'screens/file_list_screen.dart';
 import 'screens/login_screen.dart';
+import 'theme/app_theme.dart';
+import 'theme/theme_controller.dart';
 
 void main() {
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => AuthProvider(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => ThemeController()),
+      ],
       child: const FileBrowserApp(),
     ),
   );
@@ -64,9 +69,12 @@ class _FileBrowserAppState extends State<FileBrowserApp> {
 
   @override
   Widget build(BuildContext context) {
+    final themeController = context.watch<ThemeController>();
     return MaterialApp.router(
       title: 'FileBrowser',
-      theme: ThemeData(colorSchemeSeed: Colors.indigo, useMaterial3: true),
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode: themeController.mode,
       routerConfig: _router,
     );
   }
