@@ -1,6 +1,8 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
+import 'package:dio/io.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../models/file_entry.dart';
@@ -25,7 +27,41 @@ class FileBrowserClient {
   String? _username;
 
   FileBrowserClient({required String baseUrl})
-    : _dio = Dio(BaseOptions(baseUrl: baseUrl));
+    : _dio = Dio(BaseOptions(baseUrl: baseUrl)) {
+    // Some Android devices/networks fail plain DNS lookups for hostnames
+    // that resolve fine in Chrome (which falls back gracefully between
+    // IPv4/IPv6). Forcing an IPv4 lookup here sidesteps that gap instead of
+    // relying on Dart's default resolution behavior.
+    //
+    // Setting connectionFactory bypasses HttpClient's own https handling
+    // entirely — it hands back whatever Socket we return as-is, so for an
+    // https:// URL we must perform the TLS handshake ourselves, connecting
+    // to the resolved IP but verifying/SNI-ing against the real hostname.
+    // Skipping this sent plaintext HTTP to the TLS port, which Cloudflare
+    // rejected with "The plain HTTP request was sent to HTTPS port".
+    (_dio.httpClientAdapter as IOHttpClientAdapter).createHttpClient = () {
+      final client = HttpClient();
+      client.connectionFactory = (uri, proxyHost, proxyPort) async {
+        final addresses = await InternetAddress.lookup(
+          uri.host,
+          type: InternetAddressType.IPv4,
+        );
+        if (addresses.isEmpty) {
+          throw SocketException("Failed host lookup: '${uri.host}'");
+        }
+        final address = addresses.first;
+        if (uri.scheme == 'https') {
+          final Future<Socket> secureSocket = Socket.connect(
+            address,
+            uri.port,
+          ).then((raw) => SecureSocket.secure(raw, host: uri.host));
+          return ConnectionTask.fromSocket(secureSocket, () {});
+        }
+        return Socket.startConnect(address, uri.port);
+      };
+      return client;
+    };
+  }
 
   String get baseUrl => _dio.options.baseUrl;
   String? get authHeader => _dio.options.headers['Authorization'] as String?;

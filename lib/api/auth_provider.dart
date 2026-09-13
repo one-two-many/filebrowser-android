@@ -60,7 +60,10 @@ class AuthProvider extends ChangeNotifier {
       } else {
         error = 'Login failed: ${e.type.name} — ${e.message}';
       }
-      debugPrint('Login error: $e');
+      debugPrint(
+        'Login error: status=${e.response?.statusCode} '
+        'body=${e.response?.data} message=${e.message}',
+      );
     } catch (e) {
       error = 'Login failed: $e';
     } finally {
