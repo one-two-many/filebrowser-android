@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../theme/nocturne_colors.dart';
 
-void showNocturneToast(BuildContext context, String message) {
+void showNocturneToast(BuildContext context, String message, {bool isError = false}) {
   final overlay = Overlay.of(context);
   final colors = context.nocturne;
+  const errorColor = Color(0xFFCF6679);
   late final OverlayEntry entry;
 
   entry = OverlayEntry(
@@ -26,7 +27,11 @@ void showNocturneToast(BuildContext context, String message) {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.check, size: 20, color: colors.accent),
+              Icon(
+                isError ? Icons.error_outline : Icons.check,
+                size: 20,
+                color: isError ? errorColor : colors.accent,
+              ),
               const SizedBox(width: 10),
               Flexible(
                 child: Text(

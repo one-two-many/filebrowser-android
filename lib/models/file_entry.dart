@@ -25,7 +25,7 @@ class FileEntry {
     final name = json['name'] as String? ?? '';
     return FileEntry(
       name: name,
-      path: _joinPath(parentPath, name),
+      path: joinPath(parentPath, name),
       isDir: isDir,
       size: (json['size'] as num?)?.toInt() ?? 0,
       modified:
@@ -35,8 +35,9 @@ class FileEntry {
     );
   }
 
-  static String _joinPath(String parent, String name) {
-    if (parent.isEmpty || parent == '/') return '/$name';
-    return '$parent/$name';
-  }
+}
+
+String joinPath(String parent, String name) {
+  if (parent.isEmpty || parent == '/') return '/$name';
+  return '$parent/$name';
 }

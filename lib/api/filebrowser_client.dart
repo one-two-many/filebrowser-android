@@ -1,7 +1,18 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../models/file_entry.dart';
+
+/// Thrown when the server refuses to create/overwrite something because a
+/// file or folder already exists at that path (HTTP 409).
+class ResourceConflictException implements Exception {
+  final String message;
+  ResourceConflictException(this.message);
+  @override
+  String toString() => message;
+}
 
 class FileBrowserClient {
   final Dio _dio;
@@ -17,6 +28,18 @@ class FileBrowserClient {
     : _dio = Dio(BaseOptions(baseUrl: baseUrl));
 
   String get baseUrl => _dio.options.baseUrl;
+  String? get authHeader => _dio.options.headers['Authorization'] as String?;
+  String? get defaultSource => _defaultSource;
+
+  String downloadUrl(String path) {
+    final query = Uri(
+      queryParameters: {
+        if (_defaultSource != null) 'source': _defaultSource,
+        'file': path,
+      },
+    ).query;
+    return '$baseUrl/api/resources/download?$query';
+  }
 
   Future<void> login(String username, String password) async {
     // FileBrowser Quantum takes the username as a query param and the
@@ -63,6 +86,83 @@ class FileBrowserClient {
     final scopes = data['scopes'] as List<dynamic>? ?? [];
     if (scopes.isNotEmpty) {
       _defaultSource = (scopes.first as Map<String, dynamic>)['name'] as String?;
+    }
+  }
+
+  Future<void> createFolder(String path, {bool override = false}) async {
+    try {
+      await _dio.post(
+        '/api/resources',
+        queryParameters: {
+          'path': path,
+          if (_defaultSource != null) 'source': _defaultSource,
+          'isDir': 'true',
+          if (override) 'override': 'true',
+        },
+        // The server returns an empty body on success — don't let Dio try
+        // (and fail) to parse it as JSON, which would look like an error
+        // even though the folder was created successfully.
+        options: Options(responseType: ResponseType.plain),
+      );
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 409) {
+        throw ResourceConflictException('A folder already exists at "$path"');
+      }
+      throw Exception(
+        'POST /api/resources?path=$path failed: '
+        '${e.response?.statusCode} ${e.response?.data ?? e.message}',
+      );
+    }
+  }
+
+  Future<void> uploadFile(
+    String path,
+    Uint8List bytes, {
+    bool override = false,
+  }) async {
+    try {
+      await _dio.post(
+        '/api/resources',
+        queryParameters: {
+          'path': path,
+          if (_defaultSource != null) 'source': _defaultSource,
+          'isDir': 'false',
+          if (override) 'override': 'true',
+        },
+        data: Stream.fromIterable([bytes]),
+        options: Options(
+          contentType: 'application/octet-stream',
+          headers: {Headers.contentLengthHeader: bytes.length},
+          // Same empty-body-on-success issue as createFolder.
+          responseType: ResponseType.plain,
+        ),
+      );
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 409) {
+        throw ResourceConflictException('A file already exists at "$path"');
+      }
+      throw Exception(
+        'POST /api/resources?path=$path failed: '
+        '${e.response?.statusCode} ${e.response?.data ?? e.message}',
+      );
+    }
+  }
+
+  Future<void> deleteResource(String path) async {
+    try {
+      await _dio.delete(
+        '/api/resources',
+        queryParameters: {
+          'path': path,
+          if (_defaultSource != null) 'source': _defaultSource,
+        },
+        options: Options(responseType: ResponseType.plain),
+      );
+    } on DioException catch (e) {
+      throw Exception(
+        'DELETE /api/resources?path=$path failed: '
+        '${e.response?.statusCode} ${e.response?.data ?? e.message}',
+      );
     }
   }
 
